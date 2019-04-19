@@ -6,7 +6,9 @@ import numpy as np
 
 # Computing loss function
 def loss(y, yhat):
-    return -y * np.log(yhat) - (1-y) * np.log(1-yhat)
+    m = y.shape[1]
+    res = -y * np.log(yhat) - (1-y) * np.log(1-yhat)
+    return np.sum(res) / m
 
 # Computing gradient of the loss function
 def gradient(activation, y, x):
@@ -14,11 +16,12 @@ def gradient(activation, y, x):
     # y = [1x100]
     # x = [100x2]
     # returns [1x2] gradient value for each weight that multiplies each feature
+    m = y.shape[1]
     assert(activation.shape[0] == y.shape[0])
     assert (activation.shape[1] == y.shape[1])
     dz = activation - y
     assert(dz.shape[1] == x.shape[0])
-    return np.dot(dz, x)
+    return np.dot(dz, x) / m
 
 
 # Computing the logistic function
@@ -39,40 +42,52 @@ m = 75
 num_features = 2
 
 # X = [m,2]
-X = np.array([[row[i] for i in range(num_features)] for row in input[:-m]])
+X = np.array([[row[i] for i in range(num_features)] for row in input[:m]])
 # Y = [1, 100]
-Y = np.array([row[2] for row in input[:-m]])
+Y = np.array([row[2] for row in input[:m]]).reshape(1,m)
 
 x1 = [row[0] for row in X]
 x2 = [row[1] for row in X]
 
 # Visualizing data
-marker = ['o','+']
-plt.scatter(x1,x2)
-plt.show()
+colors = ['red' if i == 0 else 'blue' for i in Y[0]]
+plt.figure(1)
+plt.subplot(2,1,1)
+plt.scatter(x1,x2, color=colors)
 
 # Initialization of parameters theta(weights) and learning rate
-theta = np.random.randn(num_features,1)
+theta = np.random.randn(num_features,1) * 0.01
 print(theta.shape, X.shape)
 b = 0
-learning_rate = 0.01
+learning_rate = 0.0001
 num_iter = 100
 
 loss_vals = []
+loss_val_it = []
 
-for iteration in range(100):
+for iteration in range(500):
     # yhat =  [2,1].T dot [m,2] = [
     yhat = logistic( np.dot(theta.T, X.T) ) # [1,100]
     loss_vals.append(loss(Y, yhat))
+    plt.subplot(2,1,2)
+    loss_val_it.append(iteration)
+    plt.plot(loss_val_it, loss_vals)
 
-    z = np.dot(theta, X) + b
+    z = np.dot(theta.T, X.T) + b
     activation = logistic(z)
 
     dz = activation-Y
     dtheta = gradient(activation, Y, X)
 
     # gradient descent
-    theta = theta - learning_rate * dtheta
-    b = b - learning_rate * dz
+    theta = theta - (learning_rate * dtheta).T
+    b = b - learning_rate * np.sum(dz)/m
 
     # update loss function plot with new theta and iteration number
+
+print(loss_vals[-1])
+plt.subplot(2,1,1)
+x1_vals = np.array([30,100])
+x2_vals = (theta[1][0] * x1_vals + b)/ -theta[0][0]
+plt.plot(x1_vals, x2_vals)
+plt.show()
